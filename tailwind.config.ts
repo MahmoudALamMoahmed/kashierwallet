@@ -63,6 +63,13 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      backgroundImage: {
+        'shop-gradient': 'var(--shop-gradient)',
+      },
+      boxShadow: {
+        'product': 'var(--product-shadow)',
+        'product-hover': 'var(--product-shadow-hover)',
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

@@ -150,7 +150,7 @@ const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
           <Button 
             onClick={handlePayment}
             disabled={isLoading}
-            className="w-full bg-[var(--shop-gradient)] hover:bg-primary-glow"
+            className="w-full bg-shop-gradient hover:bg-primary-glow text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
           >
             {isLoading ? (
               <>

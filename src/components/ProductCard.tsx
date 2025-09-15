@@ -38,7 +38,7 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
           </span>
           <Button 
             onClick={() => onBuy(product)}
-            className="bg-[var(--shop-gradient)] hover:bg-primary-glow transition-all duration-200"
+            className="bg-shop-gradient hover:bg-primary-glow text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
           >
             Buy Now
           </Button>
