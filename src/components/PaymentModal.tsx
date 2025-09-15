@@ -75,33 +75,39 @@ const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
 
     setPaymentHash(hashData.hash);
 
-    // Create and inject Kashier iframe script
+    // Remove any existing Kashier script first
+    const existingScript = document.getElementById('kashier-checkout');
+    if (existingScript) {
+      existingScript.remove();
+    }
+
+    // Create and inject Kashier checkout script
     const script = document.createElement('script');
-    script.id = 'kashier-iframe';
+    script.id = 'kashier-checkout';
     script.src = 'https://payments.kashier.io/kashier-checkout.js';
     script.setAttribute('data-amount', product.price.toString());
     script.setAttribute('data-hash', hashData.hash);
     script.setAttribute('data-currency', product.currency);
     script.setAttribute('data-orderId', orderId);
     script.setAttribute('data-merchantId', hashData.merchantId);
-    script.setAttribute('data-merchantRedirect', `${window.location.origin}/payment-success`);
+    script.setAttribute('data-merchantRedirect', `${window.location.origin}/payment-success?orderId=${orderId}&amount=${product.price}&currency=${product.currency}`);
+    script.setAttribute('data-failureRedirect', `${window.location.origin}/payment-failure?orderId=${orderId}&amount=${product.price}&currency=${product.currency}`);
     script.setAttribute('data-mode', 'test');
     script.setAttribute('data-type', 'external');
     script.setAttribute('data-display', 'en');
     script.setAttribute('data-redirectMethod', 'get');
-    script.setAttribute('data-failureRedirect', 'true');
     
-    // Remove any existing Kashier script
-    const existingScript = document.getElementById('kashier-iframe');
-    if (existingScript) {
-      existingScript.remove();
-    }
+    // Add script to head for better compatibility
+    document.head.appendChild(script);
     
-    document.body.appendChild(script);
+    // Close the modal after a short delay to allow the payment gateway to load
+    setTimeout(() => {
+      onClose();
+    }, 1000);
 
     toast({
       title: "Payment Initialized",
-      description: "Redirecting to Kashier payment gateway...",
+      description: "Opening Kashier payment gateway...",
     });
   };
 
