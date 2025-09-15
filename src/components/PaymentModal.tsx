@@ -81,21 +81,24 @@ const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
       existingScript.remove();
     }
 
-    // Create and inject Kashier iFrame script according to documentation
+    // Create and inject Kashier iFrame script according to official documentation
     const script = document.createElement('script');
     script.id = 'kashier-iFrame';
-    script.src = 'https://payments.kashier.io/kashier-checkout.js';
+    script.src = 'https://checkout.kashier.io/kashier-checkout.js'; // Correct URL from official docs
     script.setAttribute('data-amount', product.price.toString());
     script.setAttribute('data-hash', hashData.hash);
     script.setAttribute('data-currency', product.currency);
     script.setAttribute('data-orderId', orderId);
     script.setAttribute('data-merchantId', hashData.merchantId);
-    script.setAttribute('data-merchantRedirect', encodeURIComponent(`${window.location.origin}/payment-success?orderId=${orderId}&amount=${product.price}&currency=${product.currency}`));
+    script.setAttribute('data-merchantRedirect', `${window.location.origin}/payment-success?orderId=${orderId}&amount=${product.price}&currency=${product.currency}`);
     script.setAttribute('data-failureRedirect', 'TRUE');
     script.setAttribute('data-mode', 'test');
-    script.setAttribute('data-type', 'external');
     script.setAttribute('data-display', 'en');
     script.setAttribute('data-redirectMethod', 'get');
+    script.setAttribute('data-metaData', JSON.stringify({
+      'Customer Name': 'Customer',
+      'Customer Email': 'customer@example.com'
+    }));
     
     // Add script to document body as per Kashier documentation
     document.body.appendChild(script);
