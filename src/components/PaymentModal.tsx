@@ -74,10 +74,11 @@ const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
 
     // Build Kashier checkout URL with all required parameters
     const baseUrl = 'https://checkout.kashier.io';
+    const formattedAmount = hashData.formattedAmount || product.price.toFixed(2);
     const queryParams = new URLSearchParams({
       merchantId: hashData.merchantId,
       orderId: orderId,
-      amount: product.price.toString(),
+      amount: formattedAmount, // Use formatted amount
       currency: product.currency,
       hash: hashData.hash,
       merchantRedirect: `${window.location.origin}/payment-success?orderId=${orderId}&amount=${product.price}&currency=${product.currency}`,
