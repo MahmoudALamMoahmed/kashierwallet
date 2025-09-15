@@ -1,81 +1,70 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
-  const orderId = searchParams.get("orderId") || "N/A";
-  const amount = searchParams.get("amount") || "N/A";
-  const currency = searchParams.get("currency") || "EGP";
-
-  const [status, setStatus] = useState<"loading" | "success" | "failed">("loading");
-
+  
   useEffect(() => {
-    const verifyTransaction = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke("verify-transaction", {
-          body: { orderId }
-        });
-
-        if (error || !data?.success) {
-          setStatus("failed");
-          return;
-        }
-
-        // Check Kashier API response for transaction status
-        const txn = data.data?.transactions?.[0];
-        if (txn && txn.status === "SUCCESS") {
-          setStatus("success");
-        } else {
-          setStatus("failed");
-        }
-      } catch (err) {
-        console.error("Verify error:", err);
-        setStatus("failed");
-      }
-    };
-
-    if (orderId !== "N/A") {
-      verifyTransaction();
+    // Clean up any remaining Kashier scripts
+    const existingScript = document.getElementById('kashier-iframe');
+    if (existingScript) {
+      existingScript.remove();
     }
-  }, [orderId]);
+  }, []);
+
+  const orderId = searchParams.get('orderId') || 'N/A';
+  const amount = searchParams.get('amount') || 'N/A';
+  const currency = searchParams.get('currency') || 'EGP';
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md text-center">
         <CardContent className="p-8">
-          {status === "loading" && <p>Verifying payment...</p>}
+          <div className="mb-6">
+            <CheckCircle className="mx-auto h-16 w-16 text-success" />
+          </div>
+          
+          <h1 className="text-2xl font-bold text-foreground mb-2">
+            Payment Successful!
+          </h1>
+          
+          <p className="text-muted-foreground mb-6">
+            Thank you for your purchase. Your payment has been processed successfully.
+          </p>
 
-          {status === "success" && (
-            <>
-              <CheckCircle className="mx-auto h-16 w-16 text-success mb-6" />
-              <h1 className="text-2xl font-bold mb-2">Payment Successful!</h1>
-              <p className="mb-6">Thank you for your purchase.</p>
-              <div className="bg-muted rounded-lg p-4 mb-6 text-left">
-                <h3 className="font-semibold mb-2">Order Details</h3>
-                <p>Order ID: {orderId}</p>
-                <p>Amount: {currency} {amount}</p>
-                <p>Status: <span className="text-success">Completed</span></p>
+          <div className="bg-muted rounded-lg p-4 mb-6 text-left">
+            <h3 className="font-semibold mb-2">Order Details</h3>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Order ID:</span>
+                <span className="font-mono">{orderId}</span>
               </div>
-              <Button asChild className="w-full">
-                <Link to="/">Continue Shopping</Link>
-              </Button>
-            </>
-          )}
+              <div className="flex justify-between">
+                <span>Amount:</span>
+                <span>{currency} {amount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Status:</span>
+                <span className="text-success font-semibold">Completed</span>
+              </div>
+            </div>
+          </div>
 
-          {status === "failed" && (
-            <>
-              <XCircle className="mx-auto h-16 w-16 text-destructive mb-6" />
-              <h1 className="text-2xl font-bold mb-2">Payment Not Verified</h1>
-              <p className="mb-6">We could not verify your transaction.</p>
-              <Button asChild className="w-full">
-                <Link to="/">Try Again</Link>
-              </Button>
-            </>
-          )}
+          <div className="space-y-3">
+            <Button 
+              asChild 
+              className="w-full bg-[var(--shop-gradient)] hover:bg-primary-glow"
+            >
+              <Link to="/">Continue Shopping</Link>
+            </Button>
+            
+            <p className="text-xs text-muted-foreground">
+              A confirmation email will be sent to your registered email address.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
