@@ -76,34 +76,34 @@ const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
     setPaymentHash(hashData.hash);
 
     // Remove any existing Kashier script first
-    const existingScript = document.getElementById('kashier-checkout');
+    const existingScript = document.getElementById('kashier-iFrame');
     if (existingScript) {
       existingScript.remove();
     }
 
-    // Create and inject Kashier checkout script
+    // Create and inject Kashier iFrame script according to documentation
     const script = document.createElement('script');
-    script.id = 'kashier-checkout';
+    script.id = 'kashier-iFrame';
     script.src = 'https://payments.kashier.io/kashier-checkout.js';
     script.setAttribute('data-amount', product.price.toString());
     script.setAttribute('data-hash', hashData.hash);
     script.setAttribute('data-currency', product.currency);
     script.setAttribute('data-orderId', orderId);
     script.setAttribute('data-merchantId', hashData.merchantId);
-    script.setAttribute('data-merchantRedirect', `${window.location.origin}/payment-success?orderId=${orderId}&amount=${product.price}&currency=${product.currency}`);
-    script.setAttribute('data-failureRedirect', `${window.location.origin}/payment-failure?orderId=${orderId}&amount=${product.price}&currency=${product.currency}`);
+    script.setAttribute('data-merchantRedirect', encodeURIComponent(`${window.location.origin}/payment-success?orderId=${orderId}&amount=${product.price}&currency=${product.currency}`));
+    script.setAttribute('data-failureRedirect', 'TRUE');
     script.setAttribute('data-mode', 'test');
     script.setAttribute('data-type', 'external');
     script.setAttribute('data-display', 'en');
     script.setAttribute('data-redirectMethod', 'get');
     
-    // Add script to head for better compatibility
-    document.head.appendChild(script);
+    // Add script to document body as per Kashier documentation
+    document.body.appendChild(script);
     
     // Close the modal after a short delay to allow the payment gateway to load
     setTimeout(() => {
       onClose();
-    }, 1000);
+    }, 1500);
 
     toast({
       title: "Payment Initialized",
