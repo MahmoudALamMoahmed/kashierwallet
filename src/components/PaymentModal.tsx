@@ -22,13 +22,12 @@ interface PaymentModalProps {
 
 const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [paymentHash, setPaymentHash] = useState<string | null>(null);
 
   const generateOrderId = () => {
-    return `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `order-${Date.now()}-${Math.random().toString(36).substr(2, 8)}`;
   };
 
-  const generatePaymentHash = async (orderId: string) => {
+  const createCheckoutSession = async (orderId: string) => {
     if (!product) return null;
 
     try {
@@ -69,54 +68,45 @@ const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
     if (!product) return;
 
     const orderId = generateOrderId();
-    const hashData = await generatePaymentHash(orderId);
+    const hashData = await createCheckoutSession(orderId);
     
     if (!hashData) return;
 
-    setPaymentHash(hashData.hash);
+    // Build Kashier checkout URL with all required parameters
+    const baseUrl = 'https://checkout.kashier.io';
+    const queryParams = new URLSearchParams({
+      merchantId: hashData.merchantId,
+      orderId: orderId,
+      amount: product.price.toString(),
+      currency: product.currency,
+      hash: hashData.hash,
+      merchantRedirect: `${window.location.origin}/payment-success?orderId=${orderId}&amount=${product.price}&currency=${product.currency}`,
+      failureRedirect: `${window.location.origin}/payment-failure?orderId=${orderId}&error=Payment%20failed`,
+      redirect: 'true', // Automatically redirect to Kashier's page
+      display: 'en', // Display language
+      store: product.name,
+      mode: 'test', // Test mode
+      customerReference: hashData.customerReference || '1'
+    });
 
-    // Remove any existing Kashier script first
-    const existingScript = document.getElementById('kashier-iFrame');
-    if (existingScript) {
-      existingScript.remove();
-    }
-
-    // Create and inject Kashier iFrame script according to official documentation
-    const script = document.createElement('script');
-    script.id = 'kashier-iFrame';
-    script.src = 'https://checkout.kashier.io'; // Correct URL from official docs
-    script.setAttribute('data-amount', product.price.toString());
-    script.setAttribute('data-hash', hashData.hash);
-    script.setAttribute('data-currency', product.currency);
-    script.setAttribute('data-orderId', orderId);
-    script.setAttribute('data-merchantId', hashData.merchantId);
-    script.setAttribute('data-merchantRedirect', `${window.location.origin}/payment-success?orderId=${orderId}&amount=${product.price}&currency=${product.currency}`);
-    script.setAttribute('data-failureRedirect', 'TRUE');
-    script.setAttribute('data-mode', 'test');
-    script.setAttribute('data-display', 'en');
-    script.setAttribute('data-redirectMethod', 'get');
-    script.setAttribute('data-metaData', JSON.stringify({
-      'Customer Name': 'Customer',
-      'Customer Email': 'customer@example.com'
-    }));
+    const checkoutUrl = `${baseUrl}?${queryParams.toString()}`;
     
-    // Add script to document body as per Kashier documentation
-    document.body.appendChild(script);
-    
-    // Close the modal after a short delay to allow the payment gateway to load
-    setTimeout(() => {
-      onClose();
-    }, 1500);
+    console.log('Redirecting to:', checkoutUrl);
 
     toast({
       title: "Payment Initialized",
-      description: "Opening Kashier payment gateway...",
+      description: "Redirecting to Kashier payment gateway...",
     });
+
+    // Close modal first
+    onClose();
+    
+    // Redirect to Kashier checkout page
+    window.location.href = checkoutUrl;
   };
 
   useEffect(() => {
     if (!isOpen) {
-      setPaymentHash(null);
       setIsLoading(false);
     }
   }, [isOpen]);
