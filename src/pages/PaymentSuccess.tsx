@@ -25,12 +25,12 @@ const PaymentSuccess = () => {
           return;
         }
 
-        // ✅ استخدم OR بدل AND
-        if (data.verified || data.status === "SUCCESS") {
+        if (data.verified) {
           setStatus("success");
         } else {
           setStatus("failed");
         }
+
       } catch (err) {
         console.error("Verify error:", err);
         setStatus("failed");
