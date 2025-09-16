@@ -55,12 +55,8 @@ const PaymentSuccess = () => {
               <div className="bg-muted rounded-lg p-4 mb-6 text-left">
                 <h3 className="font-semibold mb-2">Order Details</h3>
                 <p>Order ID: {merchantOrderId}</p>
-                <p>
-                  Amount: {currency} {amount}
-                </p>
-                <p>
-                  Status: <span className="text-success">Completed</span>
-                </p>
+                <p>Amount: {currency} {amount}</p>
+                <p>Status: <span className="text-success">Completed</span></p>
               </div>
               <Button asChild className="w-full">
                 <Link to="/">Continue Shopping</Link>
@@ -71,8 +67,13 @@ const PaymentSuccess = () => {
           {status === "failed" && (
             <>
               <XCircle className="mx-auto h-16 w-16 text-destructive mb-6" />
-              <h1 className="text-2xl font-bold mb-2">Payment Not Verified</h1>
+              <h1 className="text-2xl font-bold mb-2">Payment Failed</h1>
               <p className="mb-6">We could not verify your transaction.</p>
+              <div className="bg-muted rounded-lg p-4 mb-6 text-left">
+                <h3 className="font-semibold mb-2">Order Details</h3>
+                <p>Order ID: {merchantOrderId}</p>
+                <p>Status: <span className="text-destructive">Failed</span></p>
+              </div>
               <Button asChild className="w-full">
                 <Link to="/">Try Again</Link>
               </Button>
