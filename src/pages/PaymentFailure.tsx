@@ -24,7 +24,7 @@ const PaymentFailure = () => {
           return;
         }
 
-        if (data.verified) {
+        if (data.verified && data.status === "SUCCESS") {
           setStatus("success");
         } else {
           setStatus("failed");
