@@ -25,7 +25,8 @@ const PaymentSuccess = () => {
           return;
         }
 
-       if (data.verified && data.status === "SUCCESS") {
+        // ✅ استخدم OR بدل AND
+        if (data.verified || data.status === "SUCCESS") {
           setStatus("success");
         } else {
           setStatus("failed");
@@ -40,6 +41,7 @@ const PaymentSuccess = () => {
       verifyTransaction();
     }
   }, [merchantOrderId]);
+
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
