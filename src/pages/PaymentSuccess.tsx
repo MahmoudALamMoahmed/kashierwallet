@@ -7,32 +7,26 @@ import { supabase } from "@/integrations/supabase/client";
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
-  const orderId = searchParams.get("orderId");
-  const merchantOrderId = searchParams.get("merchantOrderId");
-  const transactionId = searchParams.get("transactionId");
+  const orderId = searchParams.get("orderId") || "N/A";
   const amount = searchParams.get("amount") || "N/A";
   const currency = searchParams.get("currency") || "EGP";
 
-  const [status, setStatus] = useState<"loading" | "success" | "failed">(
-    "loading",
-  );
+  const [status, setStatus] = useState<"loading" | "success" | "failed">("loading");
 
   useEffect(() => {
     const verifyTransaction = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke(
-          "verify-transaction",
-          {
-            body: { orderId, merchantOrderId, transactionId },
-          },
-        );
+        const { data, error } = await supabase.functions.invoke("verify-transaction", {
+          body: { orderId }
+        });
 
         if (error || !data?.success) {
           setStatus("failed");
           return;
         }
 
-        if (data.verified) {
+        const txn = data.data?.transactions?.[0];
+        if (txn && txn.status === "SUCCESS") {
           setStatus("success");
         } else {
           setStatus("failed");
@@ -43,8 +37,10 @@ const PaymentSuccess = () => {
       }
     };
 
-    verifyTransaction();
-  }, [orderId, merchantOrderId, transactionId]);
+    if (orderId !== "N/A") {
+      verifyTransaction();
+    }
+  }, [orderId]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -59,13 +55,9 @@ const PaymentSuccess = () => {
               <p className="mb-6">Thank you for your purchase.</p>
               <div className="bg-muted rounded-lg p-4 mb-6 text-left">
                 <h3 className="font-semibold mb-2">Order Details</h3>
-                <p>Order ID: {orderId || merchantOrderId}</p>
-                <p>
-                  Amount: {currency} {amount}
-                </p>
-                <p>
-                  Status: <span className="text-success">Completed</span>
-                </p>
+                <p>Order ID: {orderId}</p>
+                <p>Amount: {currency} {amount}</p>
+                <p>Status: <span className="text-success">Completed</span></p>
               </div>
               <Button asChild className="w-full">
                 <Link to="/">Continue Shopping</Link>
