@@ -32,17 +32,17 @@ const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
 
     try {
       setIsLoading(true);
-      
-      const { data, error } = await supabase.functions.invoke('generate-payment-hash', {
+
+      const { data, error } = await supabase.functions.invoke("generate-payment-hash", {
         body: {
           orderId,
           amount: product.price,
-          currency: product.currency
-        }
+          currency: product.currency,
+        },
       });
 
       if (error) {
-        console.error('Supabase function error:', error);
+        console.error("Supabase function error:", error);
         throw new Error(error.message);
       }
 
@@ -52,7 +52,7 @@ const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
 
       return data;
     } catch (error) {
-      console.error('Error generating payment hash:', error);
+      console.error("Error generating payment hash:", error);
       toast({
         title: "Payment Error",
         description: "Failed to initialize payment. Please try again.",
@@ -69,39 +69,35 @@ const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
 
     const orderId = generateOrderId();
     const hashData = await createCheckoutSession(orderId);
-    
+
     if (!hashData) return;
 
-    // Build Kashier checkout URL with all required parameters
-    const baseUrl = 'https://checkout.kashier.io';
+    const baseUrl = "https://checkout.kashier.io";
     const queryParams = new URLSearchParams({
       merchantId: hashData.merchantId,
       orderId: orderId,
       amount: product.price.toString(),
       currency: product.currency,
       hash: hashData.hash,
-      merchantRedirect: `${window.location.origin}/payment-success?orderId=${orderId}&amount=${product.price}&currency=${product.currency}`,
-      failureRedirect: `${window.location.origin}/payment-failure?orderId=${orderId}&error=Payment%20failed`,
-      redirect: 'true', // Automatically redirect to Kashier's page
-      display: 'en', // Display language
+      merchantRedirect: `${window.location.origin}/payment-success?merchantOrderId=${orderId}&amount=${product.price}&currency=${product.currency}`,
+      failureRedirect: `${window.location.origin}/payment-failure?merchantOrderId=${orderId}&error=Payment%20failed`,
+      redirect: "true",
+      display: "en",
       store: product.name,
-      mode: 'test', // Test mode
-      customerReference: hashData.customerReference || '1'
+      mode: "test",
+      customerReference: hashData.customerReference || "1",
     });
 
     const checkoutUrl = `${baseUrl}?${queryParams.toString()}`;
-    
-    console.log('Redirecting to:', checkoutUrl);
+
+    console.log("Redirecting to:", checkoutUrl);
 
     toast({
       title: "Payment Initialized",
       description: "Redirecting to Kashier payment gateway...",
     });
 
-    // Close modal first
     onClose();
-    
-    // Redirect to Kashier checkout page
     window.location.href = checkoutUrl;
   };
 
@@ -124,14 +120,10 @@ const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
             </Button>
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg">
-            <img 
-              src={product.image} 
-              alt={product.name}
-              className="w-16 h-16 object-cover rounded"
-            />
+            <img src={product.image} alt={product.name} className="w-16 h-16 object-cover rounded" />
             <div className="flex-1">
               <h3 className="font-semibold">{product.name}</h3>
               <p className="text-2xl font-bold text-primary">
@@ -146,7 +138,7 @@ const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
             <p>• You will be redirected to complete payment</p>
           </div>
 
-          <Button 
+          <Button
             onClick={handlePayment}
             disabled={isLoading}
             className="w-full bg-shop-gradient hover:bg-primary-glow text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
@@ -157,7 +149,7 @@ const PaymentModal = ({ product, isOpen, onClose }: PaymentModalProps) => {
                 Initializing Payment...
               </>
             ) : (
-              'Proceed to Payment'
+              "Proceed to Payment"
             )}
           </Button>
         </div>
