@@ -10,6 +10,7 @@ const PaymentSuccess = () => {
   const merchantOrderId = searchParams.get("merchantOrderId") || "N/A";
   const amount = searchParams.get("amount") || "N/A";
   const currency = searchParams.get("currency") || "EGP";
+  const type = searchParams.get("type") || "product"; // wallet or product
 
   const [status, setStatus] = useState<"loading" | "success" | "failed">("loading");
 
@@ -27,6 +28,18 @@ const PaymentSuccess = () => {
 
         if (data.verified) {
           setStatus("success");
+          
+          // إذا كانت معاملة شحن محفظة، معالجة الشحن
+          if (type === "wallet") {
+            await supabase.functions.invoke("process-wallet-payment", {
+              body: { 
+                merchantOrderId,
+                transactionStatus: "SUCCESS",
+                amount: parseFloat(amount),
+                currency
+              }
+            });
+          }
         } else {
           setStatus("failed");
         }
@@ -52,8 +65,12 @@ const PaymentSuccess = () => {
           {status === "success" && (
             <>
               <CheckCircle className="mx-auto h-16 w-16 text-success mb-6" />
-              <h1 className="text-2xl font-bold mb-2">Payment Successful!</h1>
-              <p className="mb-6">Thank you for your purchase.</p>
+              <h1 className="text-2xl font-bold mb-2">
+                {type === "wallet" ? "تم شحن المحفظة بنجاح!" : "تم الدفع بنجاح!"}
+              </h1>
+              <p className="mb-6">
+                {type === "wallet" ? "تم إضافة المبلغ إلى محفظتك." : "شكراً لك على الشراء."}
+              </p>
               <div className="bg-muted rounded-lg p-4 mb-6 text-left">
                 <h3 className="font-semibold mb-2">Order Details</h3>
                 <p>Order ID: {merchantOrderId}</p>

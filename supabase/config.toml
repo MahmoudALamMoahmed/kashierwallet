@@ -1,1 +1,13 @@
 project_id = "lnhgqqjmfvjuoffveowl"
+
+[functions.generate-payment-hash]
+verify_jwt = false
+
+[functions.verify-transaction] 
+verify_jwt = false
+
+[functions.process-wallet-payment]
+verify_jwt = false
+
+[functions.process-wallet-purchase]
+verify_jwt = true

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ProductCard from "@/components/ProductCard";
 import PaymentModal from "@/components/PaymentModal";
+import { WalletComponent } from "@/components/WalletComponent";
 import headphonesImg from "@/assets/headphones.jpg";
 import smartwatchImg from "@/assets/smartwatch.jpg";
 
@@ -51,8 +52,15 @@ const Index = () => {
       {/* Header */}
       <header className="bg-card border-b border-border">
         <div className="container mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-foreground">TechStore</h1>
-          <p className="text-muted-foreground mt-1">Premium tech products with secure payment</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">TechStore</h1>
+              <p className="text-muted-foreground mt-1">Premium tech products with secure payment</p>
+            </div>
+            <div className="flex-shrink-0">
+              <WalletComponent />
+            </div>
+          </div>
         </div>
       </header>
 
