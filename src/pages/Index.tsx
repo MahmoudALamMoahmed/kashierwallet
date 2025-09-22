@@ -61,8 +61,8 @@ const Index = () => {
               <p className="text-muted-foreground mt-1">متجر إلكتروني مع نظام محفظة آمن</p>
             </div>
             <div className="flex items-center space-x-4">
-              <WalletComponent />
               <AuthComponent user={user} onAuthChange={refreshWallet} />
+              <WalletComponent />
             </div>
           </div>
         </div>

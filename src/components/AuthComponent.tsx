@@ -20,51 +20,9 @@ export const AuthComponent = ({ user, onAuthChange }: AuthComponentProps) => {
 
   // إنشاء مستخدم guest تلقائياً
   const createGuestUser = async () => {
-    try {
-      setIsLoading(true);
-      const guestEmail = `guest-${Date.now()}@techstore.app`;
-      
-      const { data, error } = await supabase.auth.signUp({
-        email: guestEmail,
-        password: 'guest123456',
-        options: {
-          emailRedirectTo: undefined,
-          data: {
-            display_name: 'زائر',
-            is_guest: true
-          }
-        }
-      });
-
-      if (error) {
-        console.error('Guest signup error:', error);
-        // إذا فشل التسجيل، نحاول تسجيل الدخول
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: guestEmail,
-          password: 'guest123456'
-        });
-        
-        if (signInError) {
-          throw new Error('فشل في إنشاء حساب الزائر');
-        }
-      }
-
-      toast({
-        title: "مرحباً!",
-        description: "تم إنشاء محفظتك بنجاح",
-      });
-
-      onAuthChange();
-    } catch (error: any) {
-      console.error('Error creating guest:', error);
-      toast({
-        title: "خطأ",
-        description: error.message || "حدث خطأ في إنشاء الحساب",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // لا نحتاج إنشاء guest تلقائياً بعد الآن
+    // سيكون هناك صفحة login مخصصة
+    return;
   };
 
   const handleQuickSignup = async () => {
@@ -124,63 +82,21 @@ export const AuthComponent = ({ user, onAuthChange }: AuthComponentProps) => {
   };
 
   useEffect(() => {
-    // إنشاء مستخدم guest تلقائياً إذا لم يكن هناك مستخدم
-    if (!user) {
-      createGuestUser();
-    }
+    // لن ننشئ مستخدم guest تلقائياً
+    // المستخدم سيحتاج للذهاب لصفحة /login
   }, [user]);
 
   if (!user) {
     return (
       <div className="flex items-center space-x-2">
         <Button 
-          onClick={() => setShowAuthDialog(true)}
-          variant="outline"
+          onClick={() => window.location.href = '/login'}
+          className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary"
           size="sm"
         >
           <UserIcon className="h-4 w-4 mr-2" />
-          تسجيل دخول
+          تسجيل الدخول
         </Button>
-
-        <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-          <DialogContent className="sm:max-w-md" dir="rtl">
-            <DialogHeader>
-              <DialogTitle>إنشاء حساب سريع</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">البريد الإلكتروني</label>
-                <Input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">رقم الهاتف (اختياري)</label>
-                <Input
-                  type="tel"
-                  placeholder="01000000000"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-
-              <Button 
-                onClick={handleQuickSignup}
-                disabled={isLoading || !email}
-                className="w-full"
-              >
-                إنشاء حساب وبدء التسوق
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     );
   }
