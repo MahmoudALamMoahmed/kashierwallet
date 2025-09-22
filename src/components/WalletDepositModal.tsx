@@ -17,7 +17,7 @@ interface WalletDepositModalProps {
 export const WalletDepositModal = ({ isOpen, onClose }: WalletDepositModalProps) => {
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { user, refreshWallet } = useWallet();
+  const { user, wallet, refreshWallet } = useWallet();
 
   const predefinedAmounts = [50, 100, 200, 500, 1000];
 
@@ -40,12 +40,39 @@ export const WalletDepositModal = ({ isOpen, onClose }: WalletDepositModalProps)
       const orderId = generateOrderId();
       const depositAmount = parseFloat(amount);
 
+      console.log('Starting deposit process:', { orderId, depositAmount, userId: user.id });
+
+      // تأكد من وجود المحفظة أولاً
+      let userWallet = wallet;
+      if (!userWallet) {
+        console.log('No wallet found, creating one...');
+        const { data: newWallet, error: walletError } = await supabase
+          .from('wallets')
+          .insert([{
+            user_id: user.id,
+            balance: 0,
+            currency: 'EGP'
+          }])
+          .select()
+          .single();
+
+        if (walletError) {
+          console.error('Wallet creation error:', walletError);
+          throw new Error('فشل في إنشاء المحفظة');
+        }
+        
+        userWallet = newWallet;
+        console.log('Wallet created:', userWallet);
+      }
+
       // إنشاء معاملة في قاعدة البيانات
+      console.log('Creating transaction with wallet_id:', userWallet.id);
+      
       const { data: transaction, error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert([{
           user_id: user.id,
-          wallet_id: user.id, // سيتم تحديث هذا بعد جلب المحفظة
+          wallet_id: userWallet.id, // استخدم المحفظة الصحيحة
           transaction_type: 'deposit',
           amount: depositAmount,
           currency: 'EGP',
@@ -58,10 +85,13 @@ export const WalletDepositModal = ({ isOpen, onClose }: WalletDepositModalProps)
 
       if (transactionError) {
         console.error('Transaction creation error:', transactionError);
-        throw new Error('فشل في إنشاء المعاملة');
+        throw new Error(`فشل في إنشاء المعاملة: ${transactionError.message}`);
       }
 
+      console.log('Transaction created successfully:', transaction);
+
       // إنتاج hash للدفع
+      console.log('Generating payment hash...');
       const { data: hashData, error: hashError } = await supabase.functions.invoke("generate-payment-hash", {
         body: {
           orderId,
@@ -70,9 +100,17 @@ export const WalletDepositModal = ({ isOpen, onClose }: WalletDepositModalProps)
         },
       });
 
-      if (hashError || hashData?.error) {
-        throw new Error(hashData?.error || 'فشل في إنتاج hash للدفع');
+      if (hashError) {
+        console.error('Hash generation error:', hashError);
+        throw new Error(`فشل في إنتاج hash للدفع: ${hashError.message}`);
       }
+
+      if (hashData?.error) {
+        console.error('Hash data error:', hashData.error);
+        throw new Error(`فشل في إنتاج hash للدفع: ${hashData.error}`);
+      }
+
+      console.log('Payment hash generated successfully:', hashData);
 
       // توجيه إلى صفحة الدفع
       const baseUrl = "https://checkout.kashier.io";
@@ -94,13 +132,19 @@ export const WalletDepositModal = ({ isOpen, onClose }: WalletDepositModalProps)
 
       const checkoutUrl = `${baseUrl}?${queryParams.toString()}`;
 
+      console.log('Redirecting to checkout URL:', checkoutUrl);
+
       toast({
         title: "تم تهيئة الدفع",
         description: "سيتم توجيهك إلى صفحة الدفع...",
       });
 
       onClose();
-      window.location.href = checkoutUrl;
+      
+      // تأخير صغير قبل التوجيه للتأكد من ظهور الرسالة
+      setTimeout(() => {
+        window.location.href = checkoutUrl;
+      }, 1000);
 
     } catch (error: any) {
       console.error('Deposit error:', error);
