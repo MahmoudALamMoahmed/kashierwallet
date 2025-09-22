@@ -22,7 +22,23 @@ export const WalletComponent = () => {
   }
 
   if (!user) {
-    return null;
+    return (
+      <Card className="bg-gradient-to-r from-muted/30 to-muted/10 border-muted">
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-muted rounded-full">
+              <Wallet className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-muted-foreground">المحفظة</span>
+              <div className="text-lg font-bold text-muted-foreground">
+                جاري التحميل...
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
