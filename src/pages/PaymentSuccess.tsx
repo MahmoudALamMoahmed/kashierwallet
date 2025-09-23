@@ -3,7 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { CheckCircle, XCircle, Loader2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+// import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 
 const PaymentSuccess = () => {
@@ -50,20 +50,18 @@ const PaymentSuccess = () => {
           statusCategory: verificationResult.statusCategory
         });
 
-        // تحسين منطق التحقق
-        if (verificationResult.verified || verificationResult.statusCategory === 'SUCCESS') {
+        // معالجة المعاملة بناء على نتيجة التحقق
+        if (verificationResult.verified || verificationResult.status === 'SUCCESS') {
           setStatus("success");
           
           // إذا كانت معاملة شحن محفظة، معالجة الشحن
           if (type === "wallet") {
-            console.log('Processing wallet payment...');
+            console.log('Processing wallet payment - SUCCESS...');
             
             const { data: walletData, error: walletError } = await supabase.functions.invoke("process-wallet-payment", {
               body: { 
                 merchantOrderId,
-                transactionStatus: "SUCCESS",
-                amount: parseFloat(amount),
-                currency
+                verificationResult: verificationResult
               }
             });
 
@@ -87,7 +85,27 @@ const PaymentSuccess = () => {
             setMessage("تم الدفع بنجاح! شكراً لك على الشراء.");
           }
         } else {
+          // المعاملة فشلت - نحدث الـ status في قاعدة البيانات
           setStatus("failed");
+          
+          if (type === "wallet") {
+            console.log('Processing wallet payment - FAILED...');
+            
+            // تحديث حالة معاملة المحفظة إلى فشل
+            const { data: walletData, error: walletError } = await supabase.functions.invoke("process-wallet-payment", {
+              body: { 
+                merchantOrderId,
+                verificationResult: verificationResult // حتى لو فشلت نبعت النتيجة علشان نحدث الـ status
+              }
+            });
+
+            console.log('Failed wallet processing result:', walletData);
+            
+            if (walletError) {
+              console.error('Failed wallet processing error:', walletError);
+            }
+          }
+          
           setMessage(`المعاملة لم تكتمل بنجاح. الحالة: ${verificationResult.status}`);
         }
 
@@ -168,33 +186,37 @@ const PaymentSuccess = () => {
 
           {/* معلومات التشخيص */}
           {debugInfo && (
-            <Collapsible className="mb-6">
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" size="sm" className="w-full">
+            <div className="mb-6">
+              <details className="bg-muted/50 rounded-lg p-4">
+                <summary className="cursor-pointer text-primary font-medium flex items-center">
                   <Info className="h-4 w-4 mr-2" />
                   عرض معلومات التشخيص
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-4">
-                <div className="bg-muted/50 rounded-lg p-4 text-left">
+                </summary>
+                <div className="mt-4 text-left">
                   <h4 className="font-semibold mb-2 text-right">معلومات التشخيص:</h4>
                   <div className="text-xs space-y-2">
-                    {debugInfo.matchedSuccessKeywords?.length > 0 && (
-                      <p>✅ كلمات النجاح: {debugInfo.matchedSuccessKeywords.join(', ')}</p>
-                    )}
-                    {debugInfo.matchedFailureKeywords?.length > 0 && (
-                      <p>❌ كلمات الفشل: {debugInfo.matchedFailureKeywords.join(', ')}</p>
-                    )}
+                    <div className="grid grid-cols-2 gap-2 text-right">
+                      <p>✅ موافق عليها: {debugInfo.verificationChecks?.isApproved ? 'نعم' : 'لا'}</p>
+                      <p>📥 تم التحصيل: {debugInfo.verificationChecks?.isCaptured ? 'نعم' : 'لا'}</p>
+                      <p>✔️ ناجحة: {debugInfo.verificationChecks?.isSuccess ? 'نعم' : 'لا'}</p>
+                      <p>🔢 كود الرد: {debugInfo.allStatusFields?.responseCode || 'غير متاح'}</p>
+                    </div>
+                    <div className="mt-4 text-right">
+                      <h5 className="font-medium mb-1">جميع حالات الـ Status:</h5>
+                      <pre className="text-xs bg-black/5 p-2 rounded">
+                        {JSON.stringify(debugInfo.allStatusFields, null, 2)}
+                      </pre>
+                    </div>
                     <details className="mt-2">
                       <summary className="cursor-pointer text-primary">الرد الكامل من Kashier</summary>
                       <pre className="mt-2 text-xs overflow-auto max-h-40 bg-black/5 p-2 rounded">
-                        {JSON.stringify(debugInfo.originalResponse, null, 2)}
+                        {JSON.stringify(debugInfo.rawResponse, null, 2)}
                       </pre>
                     </details>
                   </div>
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
+              </details>
+            </div>
           )}
 
           <div className="space-y-3">
