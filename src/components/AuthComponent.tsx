@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { UserIcon, Mail, Phone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthComponentProps {
   user: any;
@@ -17,6 +18,7 @@ export const AuthComponent = ({ user, onAuthChange }: AuthComponentProps) => {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   // إنشاء مستخدم guest تلقائياً
   const createGuestUser = async () => {
@@ -73,12 +75,24 @@ export const AuthComponent = ({ user, onAuthChange }: AuthComponentProps) => {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    toast({
-      title: "تم تسجيل الخروج",
-      description: "نراك لاحقاً!",
-    });
-    onAuthChange();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw error;
+      }
+      toast({
+        title: "تم تسجيل الخروج",
+        description: "نراك لاحقاً!",
+      });
+      onAuthChange();
+    } catch (error: any) {
+      console.error('Sign out error:', error);
+      toast({
+        title: "خطأ في تسجيل الخروج",
+        description: error.message || "حدث خطأ أثناء تسجيل الخروج",
+        variant: "destructive",
+      });
+    }
   };
 
   useEffect(() => {
@@ -90,7 +104,7 @@ export const AuthComponent = ({ user, onAuthChange }: AuthComponentProps) => {
     return (
       <div className="flex items-center space-x-2">
         <Button 
-          onClick={() => window.location.href = '/login'}
+          onClick={() => navigate('/login')}
           className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary"
           size="sm"
         >

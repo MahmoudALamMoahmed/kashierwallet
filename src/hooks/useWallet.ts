@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { User, Session } from '@supabase/supabase-js';
 
 export interface Wallet {
   id: string;
@@ -31,29 +32,37 @@ export const useWallet = () => {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
-        await fetchWallet(session.user.id);
-      } else {
-        setLoading(false);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Defer supabase calls to prevent deadlock
+          setTimeout(() => {
+            fetchWallet(session.user.id);
+          }, 0);
+        } else {
+          setWallet(null);
+          setTransactions([]);
+          setLoading(false);
+        }
       }
-    };
+    );
 
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
       if (session?.user) {
-        setUser(session.user);
-        await fetchWallet(session.user.id);
+        fetchWallet(session.user.id);
       } else {
-        setUser(null);
-        setWallet(null);
-        setTransactions([]);
         setLoading(false);
       }
     });
