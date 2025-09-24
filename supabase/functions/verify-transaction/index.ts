@@ -16,12 +16,14 @@ serve(async (req)=>{
     if (!merchantOrderId && !transactionId) {
       throw new Error("Missing merchantOrderId or transactionId");
     }
-    let url;
-    if (transactionId) {
-      url = `https://test-api.kashier.io/v2/aggregator/transactions/${transactionId}`;
-    } else {
-      url = `https://test-api.kashier.io/v2/aggregator/transactions?search=${merchantOrderId}`;
-    }
+    console.log('Verifying transaction with Kashier:', {
+      merchantOrderId,
+      transactionId
+    });
+    // استخدام search parameter كما موضح في الـ documentation
+    const searchQuery = merchantOrderId || transactionId;
+    const url = `https://test-api.kashier.io/v2/aggregator/transactions?search=${encodeURIComponent(searchQuery)}&limit=1`;
+    console.log('Kashier API URL:', url);
     const resp = await fetch(url, {
       method: "GET",
       headers: {
@@ -29,16 +31,22 @@ serve(async (req)=>{
         Accept: "application/json"
       }
     });
-    if (!resp.ok) throw new Error(`Kashier API error: ${resp.status}`);
+    console.log('Kashier API response status:', resp.status);
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      console.error(`Kashier API error: ${resp.status} - ${errorText}`);
+      throw new Error(`Kashier API error: ${resp.status}`);
+    }
     const data = await resp.json();
-    // أحيانًا بيرجع Array أو Object
-    const txn = Array.isArray(data?.body) && data.body.length > 0 ? data.body[0] : data.body || null;
-    if (!txn) {
+    console.log('Kashier API response:', JSON.stringify(data, null, 2));
+    // التحقق من وجود transactions في الرد
+    if (!data.body || !Array.isArray(data.body) || data.body.length === 0) {
+      console.log('No transactions found in response');
       return new Response(JSON.stringify({
         success: true,
         verified: false,
         status: "NOT_FOUND",
-        reason: "No transaction found"
+        reason: "No transaction found with the given order ID"
       }), {
         headers: {
           ...corsHeaders,
@@ -46,30 +54,102 @@ serve(async (req)=>{
         }
       });
     }
-    // خليه كده
-    const status = txn.paymentStatus?.toUpperCase() || txn.status?.toUpperCase() || txn.lastStatus?.toUpperCase();
-    const successKeywords = [
-      "SUCCESS",
-      "APPROVED",
-      "CAPTURED",
-      "COMPLETED"
-    ];
-    const verified = successKeywords.includes(status);
-    return new Response(JSON.stringify({
+    // أخذ أول معاملة من النتائج
+    const transaction = data.body[0];
+    console.log('Processing transaction:', JSON.stringify(transaction, null, 2));
+    // استخراج الـ status values بناء على Kashier documentation
+    const transactionStatus = transaction.status || 'UNKNOWN'; // "Approved", "Rejected", etc.
+    const lastStatus = transaction.lastStatus || ''; // "CAPTURED", etc.
+    const paymentStatus = transaction.paymentStatus || ''; // "SUCCESS", "FAILED", etc.
+    const responseCode = transaction.transactionResponseCode || ''; // "00" for success
+    console.log('Status fields found:', {
+      status: transactionStatus,
+      lastStatus: lastStatus,
+      paymentStatus: paymentStatus,
+      responseCode: responseCode
+    });
+    // منطق التحقق بناء على Kashier's actual values
+    let verified = false;
+    let finalStatus = 'UNKNOWN';
+    // التحقق من النجاح بناء على القيم الفعلية من Kashier
+    const isApproved = transactionStatus.toUpperCase() === 'APPROVED';
+    const isCaptured = lastStatus.toUpperCase() === 'CAPTURED';
+    const isSuccess = paymentStatus.toUpperCase() === 'SUCCESS';
+    const isResponseCodeSuccess = responseCode === '00';
+    const isNotCancelled = !transaction.isCancelled;
+    const isNotVoided = !transaction.isVoided;
+    if (isApproved && (isCaptured || isSuccess || isResponseCodeSuccess) && isNotCancelled && isNotVoided) {
+      verified = true;
+      finalStatus = 'SUCCESS';
+      console.log('Transaction verified as successful');
+    } else if (transactionStatus.toUpperCase() === 'REJECTED' || transactionStatus.toUpperCase() === 'DECLINED' || transaction.isCancelled || transaction.isVoided || responseCode && responseCode !== '00') {
+      verified = false;
+      finalStatus = 'FAILED';
+      console.log('Transaction verified as failed');
+    } else {
+      // حالات أخرى مثل PENDING
+      verified = false;
+      finalStatus = transactionStatus.toUpperCase() || 'PENDING';
+      console.log('Transaction in pending or unknown state');
+    }
+    console.log('Final verification result:', {
+      verified,
+      finalStatus
+    });
+    const result = {
       success: true,
       verified,
-      status,
-      transaction: txn
-    }), {
+      status: finalStatus,
+      originalStatus: transactionStatus,
+      lastStatus: lastStatus,
+      paymentStatus: paymentStatus,
+      responseCode: responseCode,
+      transaction: {
+        id: transaction.transactionId || transaction._id,
+        merchantOrderId: transaction.merchantOrderId || transaction.orderReference,
+        amount: transaction.amount || transaction.totalCapturedAmount,
+        currency: transaction.currency || 'EGP',
+        method: transaction.method,
+        provider: transaction.provider,
+        date: transaction.date || transaction.createdAt,
+        responseCode: transaction.transactionResponseCode,
+        responseMessage: transaction.transactionResponseMessage,
+        isCancelled: transaction.isCancelled,
+        isVoided: transaction.isVoided,
+        totalCapturedAmount: transaction.totalCapturedAmount,
+        totalRefundedAmount: transaction.totalRefundedAmount
+      },
+      debug: {
+        rawResponse: data,
+        verificationChecks: {
+          isApproved,
+          isCaptured,
+          isSuccess,
+          isResponseCodeSuccess,
+          isNotCancelled,
+          isNotVoided
+        },
+        allStatusFields: {
+          status: transactionStatus,
+          lastStatus: lastStatus,
+          paymentStatus: paymentStatus,
+          responseCode: responseCode
+        }
+      }
+    };
+    return new Response(JSON.stringify(result), {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json"
       }
     });
   } catch (error) {
+    console.error('Verification error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error.message,
+      verified: false,
+      status: "ERROR"
     }), {
       status: 500,
       headers: {
